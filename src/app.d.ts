@@ -1,14 +1,18 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
-import type { LogtoClient, UserInfoResponse } from '@logto/sveltekit';
+
+import { SupabaseClient, Session } from '@supabase/supabase-js';
+
 declare global {
 	namespace App {
-		// interface Error {}
 		interface Locals {
-			logtoClient: LogtoClient;
-			user?: UserInfoResponse;
+			supabase: SupabaseClient;
+			session: Session | null;
 		}
-		// interface PageData {}
+		interface PageData {
+			session: Session | null;
+		}
+		// interface Error {}
 		// interface PageState {}
 		// interface Platform {}
 	}

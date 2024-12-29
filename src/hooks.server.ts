@@ -1,26 +1,41 @@
-import type { Handle } from '@sveltejs/kit';
-import { i18n } from '$lib/i18n';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { redirect, type Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
-import { handleLogto } from '@logto/sveltekit';
-import { env } from '$env/dynamic/private';
 
-const handleParaglide: Handle = i18n.handle();
-const handlePg: Handle = handleParaglide;
+const handleAuth: Handle = async ({ event, resolve }) => {
+	const supabase = createServerClient(
+		process.env.PUBLIC_SUPABASE_URL ?? '',
+		process.env.PUBLIC_SUPABASE_ANON_KEY ?? '',
+		{
+			cookies: {
+				get: (key) => event.cookies.get(key),
+				set: (key, value, options) => {
+					event.cookies.set(key, value, options as CookieOptions);
+				},
+				remove: (key, options) => {
+					event.cookies.delete(key, options as CookieOptions);
+				}
+			}
+		}
+	);
 
-const handleLg = handleLogto(
-    {
-        endpoint: env.LOGTO_ENDPOINT,
-        appId: env.LOGTO_APP_ID,
-        appSecret: env.LOGTO_APP_SECRET,
-        scopes: ['email', 'profile', 'openid']  
-    },
-    { 
-        encryptionKey: env.LOGTO_COOKIE_ENCRYPTION_KEY,
-        navigateUrl: {
-            signIn: '/',     
-            signOut: '/'     
-        }
-    }
-);
+	// Refresh session if expired
+	const {
+		data: { session }
+	} = await supabase.auth.getSession();
 
-export const handle = sequence(handleLg, handlePg);
+	// Protect app routes
+	if (event.url.pathname.startsWith('/dashboard')) {
+		if (!session) {
+			throw redirect(303, '/sign-in');
+		}
+	}
+
+	// Add session to event.locals
+	event.locals.supabase = supabase;
+	event.locals.session = session;
+
+	return resolve(event);
+};
+
+export const handle = sequence(handleAuth);
