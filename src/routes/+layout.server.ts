@@ -1,10 +1,13 @@
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async (event) => {
-	const user = event.locals.user;
-	console.log('User data in layout:', user); // Debug log
+export const load: LayoutServerLoad = async ({ locals: { getSession }, cookies }) => {
+	const session = await getSession();
 
 	return {
-		user: user ?? null
+		session,
+		cookies: cookies.getAll().reduce((acc: Record<string, string>, { name, value }) => {
+			acc[name] = value;
+			return acc;
+		}, {})
 	};
 };

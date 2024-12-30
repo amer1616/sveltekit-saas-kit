@@ -26,7 +26,7 @@ saas-kit/
 │ │ │ └── app/ # App-Specific Components
 │ │ ├── config/ # Config Files
 │ │ ├── db/ # Drizzle ORM
-│ │ ├── auth/ # Logto Auth
+│ │ ├── auth/ # Supabase Auth
 │ │ ├── payment/ # Stripe Payment
 │ │ ├── ai/ # Gemini AI SDK
 │ │ ├── services/ # Services

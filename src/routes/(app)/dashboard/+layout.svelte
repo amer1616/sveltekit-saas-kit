@@ -1,8 +1,15 @@
 <script lang="ts">
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import AppSidebar from '$lib/components/app-sidebar.svelte';
+	let { data, children } = $props();
+	let { supabase } = $derived(data);
 
-	let { children } = $props();
+	const logout = async () => {
+		const { error } = await supabase.auth.signOut();
+		if (error) {
+			console.error(error);
+		}
+	};
 </script>
 
 <Sidebar.Provider>

@@ -1,10 +1,22 @@
-<script lang="ts">
-	import { i18n } from '$lib/i18n';
-	import { ParaglideJS } from '@inlang/paraglide-sveltekit';
+<script>
 	import '../app.css';
-	let { children } = $props();
+	import { invalidate } from '$app/navigation';
+	import { onMount } from 'svelte';
+
+	let { data, children } = $props();
+	let { session, supabase } = $derived(data);
+
+	onMount(() => {
+		const { data } = supabase.auth.onAuthStateChange((_, newSession) => {
+			if (newSession?.expires_at !== session?.expires_at) {
+				invalidate('supabase:auth');
+			}
+		});
+
+		return () => data.subscription.unsubscribe();
+	});
 </script>
 
-<ParaglideJS {i18n}>
+<div class="bg-background min-h-screen font-sans antialiased">
 	{@render children()}
-</ParaglideJS>
+</div>

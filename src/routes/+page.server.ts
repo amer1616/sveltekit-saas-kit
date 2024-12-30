@@ -1,10 +1,12 @@
-// import type { Actions } from './$types';
+import type { PageServerLoad } from './$types';
 
-// export const actions: Actions = {
-//     signIn: async ({ locals }) => {
-//         await locals.logtoClient.signIn('http://localhost:5173/callback');
-//     },
-//     signOut: async ({ locals }) => {
-//         await locals.logtoClient.signOut('http://localhost:5173/');
-//     }
-// };
+export const load: PageServerLoad = async ({ locals: { supabase } }) => {
+	const { data: countries } = await supabase
+		.from('countries')
+		.select('name')
+		.limit(5)
+		.order('name');
+	return { 
+		countries: countries ?? []
+	};
+};

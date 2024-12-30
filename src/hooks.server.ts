@@ -1,41 +1,46 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import { redirect, type Handle } from '@sveltejs/kit';
+import { createServerClient } from '@supabase/ssr';
+import { type Handle, redirect } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
+import type { CookieSerializeOptions } from 'cookie';
 
-const handleAuth: Handle = async ({ event, resolve }) => {
-	const supabase = createServerClient(
-		process.env.PUBLIC_SUPABASE_URL ?? '',
-		process.env.PUBLIC_SUPABASE_ANON_KEY ?? '',
-		{
-			cookies: {
-				get: (key) => event.cookies.get(key),
-				set: (key, value, options) => {
-					event.cookies.set(key, value, options as CookieOptions);
-				},
-				remove: (key, options) => {
-					event.cookies.delete(key, options as CookieOptions);
-				}
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+
+const supabase: Handle = async ({ event, resolve }) => {
+	event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+		cookies: {
+			get: (name: string) => event.cookies.get(name),
+			set: (name: string, value: string, options: CookieSerializeOptions) => {
+				event.cookies.set(name, value, { ...options, path: '/' });
+			},
+			remove: (name: string, options: CookieSerializeOptions) => {
+				event.cookies.delete(name, { ...options, path: '/' });
 			}
 		}
-	);
+	});
 
-	// Refresh session if expired
-	const {
-		data: { session }
-	} = await supabase.auth.getSession();
+	event.locals.getSession = async () => {
+		const {
+			data: { session }
+		} = await event.locals.supabase.auth.getSession();
+		return session;
+	};
 
-	// Protect app routes
+	return resolve(event, {
+		filterSerializedResponseHeaders(name) {
+			return name === 'content-range';
+		}
+	});
+};
+
+const authGuard: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname.startsWith('/dashboard')) {
+		const session = await event.locals.getSession();
 		if (!session) {
-			throw redirect(303, '/sign-in');
+			throw redirect(303, '/auth');
 		}
 	}
-
-	// Add session to event.locals
-	event.locals.supabase = supabase;
-	event.locals.session = session;
 
 	return resolve(event);
 };
 
-export const handle = sequence(handleAuth);
+export const handle: Handle = sequence(supabase, authGuard);
